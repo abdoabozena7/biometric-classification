@@ -1,0 +1,127 @@
+.stApp {
+    color: #142d29;
+    background: #f1f7f4;
+}
+
+.stApp header[data-testid="stHeader"] {
+    background: #f1f7f4;
+}
+
+.stMainBlockContainer {
+    max-width: 44rem;
+    padding-top: clamp(3.25rem, 8vh, 5rem);
+    padding-bottom: 2rem;
+}
+
+[data-testid="stHeading"] h1 {
+    padding-bottom: 0.3rem;
+    font-size: clamp(2rem, 6vw, 3.3rem);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1.08;
+}
+
+ol.signin-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.55rem;
+    list-style: none;
+    padding: 0;
+    margin: 0.35rem 0 0.9rem;
+}
+
+.signin-steps li {
+    padding-top: 0.58rem;
+    border-top: 3px solid #c9dad3;
+    color: #526c64;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: border-color 200ms ease, color 200ms ease;
+}
+
+.signin-steps li.done {
+    border-color: #68a38f;
+    color: #2e6a58;
+}
+
+.signin-steps li[aria-current="step"] {
+    border-color: #12634c;
+    color: #0d5742;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+[class*="st-key-signin-"][data-testid="stVerticalBlock"] {
+    animation: show-stage 280ms ease-out both;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"]:has(> div > [class*="st-key-signin-"]),
+[class*="st-key-signin-"] {
+    border-color: #cbded5;
+    border-radius: 1.25rem;
+    background: #ffffff;
+}
+
+[class*="st-key-signin-"] h3 {
+    padding-top: 0;
+    letter-spacing: -0.025em;
+}
+
+[data-testid="stCameraInput"] video {
+    border-radius: 0.75rem;
+}
+
+button[data-testid="stCameraInputButton"] {
+    min-height: 2.75rem;
+    border-color: #12634c;
+    background: #12634c;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+button[data-testid="stCameraInputButton"]:hover {
+    border-color: #0d503e;
+    background: #0d503e;
+    color: #ffffff;
+}
+
+[data-testid="stFileUploaderDropzone"] {
+    border: 1px dashed #a6c4b8;
+    border-radius: 0.75rem;
+}
+
+[class*="st-key-signin-"] button {
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+@keyframes show-stage {
+    from { opacity: 0; transform: translateY(9px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 480px) {
+    .stMainBlockContainer {
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+
+    .signin-steps {
+        gap: 0.42rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .signin-steps li,
+    [class*="st-key-signin-"],
+    [class*="st-key-signin-"] button {
+        animation: none !important;
+        transition: none !important;
+    }
+}

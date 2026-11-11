@@ -1,0 +1,26 @@
+{
+  "user_01": {
+    "display_name": "Abdelrahman",
+    "role": "Admin",
+    "face_identity": "Abdelrahman",
+    "voice_identity": "834f03fe",
+    "fingerprint_identity": "FVC2004_DB1_B:101",
+    "virtual_identity": true
+  },
+  "user_02": {
+    "display_name": "kareem",
+    "role": "Employee",
+    "face_identity": "kareem",
+    "voice_identity": "8e05039f",
+    "fingerprint_identity": "FVC2004_DB1_B:102",
+    "virtual_identity": true
+  },
+  "user_03": {
+    "display_name": "renad",
+    "role": "Guest",
+    "face_identity": "renad",
+    "voice_identity": "3bfd30e6",
+    "fingerprint_identity": "FVC2004_DB1_B:103",
+    "virtual_identity": true
+  }
+}

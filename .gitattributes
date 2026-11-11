@@ -1,0 +1,12 @@
+# The saved models validate SHA-256 hashes of these exact file bytes.
+/camera_face.py -text
+/commands.py -text
+/config.py -text
+/features.py -text
+/fusion.py -text
+/train.py -text
+/verification.py -text
+/data/manifests/face_voice_pairs.csv -text
+/data/manifests/identities.json -text
+/data/manifests/samples.csv -text
+/data/manifests/three_modality_triplets.csv -text

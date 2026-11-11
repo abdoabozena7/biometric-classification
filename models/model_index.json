@@ -1,0 +1,90 @@
+{
+  "selected": {
+    "face": "svm",
+    "voice": "svm",
+    "fingerprint": "svm",
+    "command": "knn",
+    "face_voice": "svm",
+    "fusion3": "svm"
+  },
+  "models": {
+    "face": {
+      "knn": "models/face_knn.joblib",
+      "svm": "models/face_svm.joblib"
+    },
+    "voice": {
+      "knn": "models/voice_knn.joblib",
+      "svm": "models/voice_svm.joblib"
+    },
+    "fingerprint": {
+      "knn": "models/fingerprint_knn.joblib",
+      "svm": "models/fingerprint_svm.joblib"
+    },
+    "command": {
+      "knn": "models/command_knn.joblib",
+      "svm": "models/command_svm.joblib"
+    },
+    "face_voice": {
+      "knn": "models/face_voice_knn.joblib",
+      "svm": "models/face_voice_svm.joblib"
+    },
+    "fusion3": {
+      "knn": "models/fusion3_knn.joblib",
+      "svm": "models/fusion3_svm.joblib"
+    }
+  },
+  "dimensions": {
+    "face": {
+      "raw": 8878,
+      "after_pca": 57,
+      "pca_fit_samples": 72,
+      "variance_preserved": 0.9530363082885742
+    },
+    "voice": {
+      "raw": 30,
+      "after_pca": 16,
+      "pca_fit_samples": 54,
+      "variance_preserved": 0.9530252814292908
+    },
+    "fingerprint": {
+      "raw": 8110,
+      "after_pca": 13,
+      "pca_fit_samples": 15,
+      "variance_preserved": 0.9735958576202393
+    }
+  },
+  "status": "TRAINED",
+  "missing_tasks": [],
+  "seed": 42,
+  "source_hashes": {
+    "features.py": "b9ce67444187491e5c04cb656da2da03ac296d092f3541321b7bd9b27ca69df0",
+    "config.py": "0c517afcd6ada54dc295799448ff085d1fda2308b7d60bf6b93a6cede9b78ade",
+    "fusion.py": "bedc083a74d3fc4551349324743035f1a07a5f9d10610f5ef882a5002061678b",
+    "commands.py": "4ca2a6467dc2b2882844088b503cd77b3df291c70048214d427cb58db1664dc6",
+    "verification.py": "da21b06b41a392e0b0ac356c5b6853f117f3cb1bbc3317895088b4ab5714b22f",
+    "train.py": "5b2c078cc2fc91bd4cc63792323cbd36ac4eabbcdefa02f36cdd4ae217eb7bb6",
+    "data/manifests/samples.csv": "f5c8d5fc7b76068f83bdce4ebab9748282cf4262cf448097d64523aa824af53e",
+    "data/manifests/identities.json": "50c948bdda3b4594a24db2a2a2e7e6dd2c4a2bbaf3efed381456b7790ccc50f1",
+    "data/manifests/face_voice_pairs.csv": "416269d99ae666fc464b92695f4abb81a316ff25251bb230c1546e39e960b921",
+    "data/manifests/three_modality_triplets.csv": "c0eb032c805b03bb13fa56c44dc3c9067a9b715440048009f4512be5e1cf3fff"
+  },
+  "artifact_hashes": {
+    "models/preprocessors.joblib": "3c1e53ce5339701b5dfc094467481867c9eb58448591dbd1d2b32cb3c5753d72",
+    "models/face_knn.joblib": "eebe90822add2310ee2b0c5b324e22cc6d3e7c59567aa2a2cfb1ba5fc955eb8a",
+    "models/face_svm.joblib": "284ba9886725d0974b1506c1f343d5d5e646836616a7e77fb87db72e0f22717c",
+    "models/voice_knn.joblib": "d0abd9e496aaeb3e4c1eee85ac9f650680b45efca54f1320e81a5fbc96cc0804",
+    "models/voice_svm.joblib": "2e58a2383f3f08a64575f8d0a34fdf1ff95c273fcfa2e363650cf1d20f27c11b",
+    "models/fingerprint_knn.joblib": "2f21b447e749f5c94504bf2fa677acae8610818b08cc0e17e651fa0925a62d5b",
+    "models/fingerprint_svm.joblib": "ab5c8b967dcb35f74b3e71ecbd01b4b4f0371e394c822f1bc9d0ecd884e72062",
+    "models/command_knn.joblib": "0e1b9ae84dedd02fbbb0f757374f2a717ebad53cde30fd302b8c3d675cda840a",
+    "models/command_svm.joblib": "88b81d2b1ac6ac03982f2121714921368a047c9805467eda8176c77f19ead483",
+    "models/face_voice_knn.joblib": "9f09d8769f571be7407badd4ab19df7a5480a5e880f375a6c9876e0c94371adb",
+    "models/face_voice_svm.joblib": "db4e697c64cd4719ff489ba471999ca4bad6f148bb2c00df5b614aabdb923670",
+    "models/fusion3_knn.joblib": "5e370f605f75f6db28afa42434267051e563e07d7e5e5822818c273796a641b7",
+    "models/fusion3_svm.joblib": "578b28e078c93b734b24338bdb3233e8c73b26e16c10eec0b7f126158813add8"
+  },
+  "selection_rule": "Highest validation macro-F1, then validation accuracy, then KNN on exact ties. No test tuning.",
+  "threshold_rule": "Minimize validation FAR + FRR; ties prefer lower FAR, then a smaller threshold.",
+  "command_threshold_rule": "Use actual supported prediction AND distance rule on supported/UNKNOWN validation words, not claimed-identity trials.",
+  "fusion_rule": "Concatenate train-only scaled/PCA-whitened blocks; divide each block by sqrt(its dimension). No repeated source within a fusion split."
+}

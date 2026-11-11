@@ -1,16 +1,18 @@
-numpy>=2.1,<3
+# Keep saved Joblib models and their feature extractors on the tested versions.
+numpy==2.5.4
+scipy==1.18.1
 pandas>=2.2,<4
-Pillow>=11,<13
-scikit-image>=0.25,<1
-scikit-learn>=1.6,<2
-librosa>=0.11,<1
-soundfile>=0.13,<1
+Pillow==12.3.0
+scikit-image==0.26.0
+scikit-learn==1.9.1
+librosa==0.11.0
+soundfile==0.14.0
 matplotlib>=3.10,<4
-joblib>=1.4,<2
+joblib==1.6.0
 requests>=2.32,<3
 pyarrow>=19,<24
 fsspec[http]>=2025.2
-streamlit>=1.44,<2
+streamlit==1.67.0
 nbformat>=5.10,<6
 nbclient>=0.10,<1
 ipykernel>=6.29,<8

@@ -1,11 +1,9 @@
 # Traditional ML Biometric Verification
 
-Start with **[01_Biometric_System.ipynb](01_Biometric_System.ipynb)**.
-It is the main teaching notebook: short sequential cells, separate pipelines,
-actual feature-function source, real samples, training examples and saved outputs.
-Then open **[02_Streamlit_Demo.ipynb](02_Streamlit_Demo.ipynb)** for the local UI.
-There are two notebooks, not a complicated notebook series or a custom framework.
-The small Python helpers are shared by both notebooks and Streamlit.
+Run the sign-in app below or open **[02_Streamlit_Demo.ipynb](02_Streamlit_Demo.ipynb)**
+to exercise it with the included samples. **[01_Biometric_System.ipynb](01_Biometric_System.ipynb)**
+walks through the feature pipelines, saved predictions, and measured results.
+Both notebooks share the Python helpers used by Streamlit.
 
 **This is an educational virtual-identity demonstration, not production security.**
 The face, public voice and public fingerprint under one user ID belong to unrelated
@@ -14,50 +12,49 @@ modalities from the same person, with consent and separate capture sessions.
 
 ## Run
 
-Before running dataset setup from a fresh clone, place your authorized face
-samples under `datasets/images/` in three subject folders. See
-[Dataset Sources and Provenance](DATASET_SOURCES.md) for the input layout and
-sources used by the setup script. The repository includes source code, notebooks,
-and aggregate results. Prepare the datasets and train the models locally.
-
-In VS Code, select `.venv/Scripts/python.exe` as the notebook kernel after
-creating the environment. The published notebook omits the embedded
-biometric sample images and recording.
+Use Python 3.13. The checkout includes the saved models, preprocessors, model
+manifests, and three sets of demo samples. After installing the dependencies,
+you can start the app and run both notebooks directly from the checkout.
 
 From a Windows PowerShell terminal in this project folder:
 
 ```powershell
-python -m venv .venv
+py -3.13 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
-.\.venv\Scripts\python.exe dataset_setup.py
-.\.venv\Scripts\python.exe train.py
-.\.venv\Scripts\python.exe camera_face.py
-.\.venv\Scripts\python.exe evaluate.py
-.\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
-Do not recreate the environment if using the prepared one. With an already
-activated environment, run `pip install -r requirements.txt`, `python dataset_setup.py`,
-`python train.py`, `python camera_face.py`, `python evaluate.py`, and `streamlit run app.py`.
+On macOS or Linux:
+
+```sh
+python3.13 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
+```
 
 Local application: **http://127.0.0.1:8501**. If occupied, choose another port.
-Cached offline data preparation: `python dataset_setup.py --local-only`.
+In VS Code, select the Python interpreter from `.venv` as the notebook kernel.
+To verify the checkout, run `python -m pytest -q` in the activated environment.
+
+To reproduce training and held-out evaluation, prepare your authorized full
+datasets using [the dataset source instructions](DATASET_SOURCES.md). With the
+original files and dataset cache available locally, run
+`python dataset_setup.py --local-only`, `python train.py`, `python camera_face.py`,
+and `python evaluate.py`.
 `--faces-only` is a partial-data diagnostic mode; it explicitly marks other
 modalities BLOCKED and is not full project completion.
 
 ## Sign In
 
-1. Choose an enrolled account. Allow camera access in your browser, center your
-   face, and take a photo.
-2. Once the face passes, upload `voice.wav` from your account folder in
-   `datasets/demo`.
-3. Once the voice passes, upload `fingerprint.png` from the same folder.
+1. Allow camera access, center your face, and take a photo. The saved camera
+   model identifies the enrolled person when the match passes its distance check.
+2. Upload `voice.wav` from that person's folder in `datasets/demo`.
+3. After the voice check passes, upload `fingerprint.png` from the same folder.
 
-Each input must pass its saved model's claimed-identity check. A rejected step
-can be retried, and changing the account, photo or recording clears later steps.
-The three demo folders include reference photos and sample uploads for the
-virtual accounts. The app takes the face image from the camera.
+The app shows one step at a time and checks both uploads against the person
+identified by the camera. You can retry a rejected input or start over with a
+new photo. The demo folders provide reference photos and sample uploads for the
+three virtual accounts.
 Abdelrahman's demo fingerprint comes from validation. The other demo files
 come from held-out test samples.
 
@@ -68,10 +65,11 @@ portrait. Scaling and PCA fit those training variants. The original validation
 portraits select between KNN(3) and linear SVM and calibrate the acceptance distance.
 The original face and fusion experiments continue to use their saved models.
 
-The main notebook defaults to `REBUILD_DATA=False` and `RETRAIN=False`. Run All
-does not silently replace splits or retrain saved models. Its small demonstration
-loop fits temporary KNN/SVM classifiers on training data only, then prints their
-validation predictions; the app always uses the saved selected artifacts.
+With the published files, the main notebook extracts features from the demo
+samples, runs saved-model predictions, and displays the recorded evaluation.
+With the full prepared dataset available locally, it also runs the training
+example and recomputes the held-out metrics. `REBUILD_DATA` and `RETRAIN` default
+to `False`.
 
 ## The Pipelines
 
@@ -192,19 +190,17 @@ These fixed held-out files were chosen before evaluation. No threshold or demo
 file was replaced to create a successful-looking presentation. The JPEG demo
 face is a re-encoding of a test source, not a separate independent observation.
 
-The original triplets and full command and permissions pipeline are available
-in the notebooks for evaluation. The sign-in page uses the three individual
-biometric checks and the samples under `datasets/demo`.
+The main notebook runs the command and permissions pipeline with the included
+demo triplets. With local `live_test` files, it uses the original held-out
+triplets for that exercise. The sign-in app uses the three individual biometric
+checks.
 
 ## Tests and Bonuses
 
-31 automated tests passed with no skips. Doubles are limited to routing tests;
-real integration tests check files, held-out inference, all twelve classifiers,
-concatenation, preprocessing sample counts and actual Streamlit interactions.
-Both notebooks executed cleanly: 16 and 5 code cells. Desktop/mobile browser
-screenshots were inspected, images/audio loaded, an impostor was rejected, and
-the no-camera state disabled verification. Browser camera permission prevented
-a genuine new capture; real webcam inference remains **UNVERIFIED**.
+The test suite checks saved-model inference and the Streamlit flow with the
+included samples. Tests that read the full prepared dataset or original
+held-out triplets require those files locally. Both notebooks can run with the
+published demo files.
 
 | Bonus | Honest Status |
 | --- | --- |
@@ -216,7 +212,7 @@ a genuine new capture; real webcam inference remains **UNVERIFIED**.
 For simple English and Egyptian Arabic explanations of every module and concept,
 read [ORAL_DEFENSE.md](ORAL_DEFENSE.md).
 
-Biometric files, models and prepared data are excluded from Git by default.
-Do not publish supplied photos, executed notebooks containing them, public voice files, fingerprints or model
-representations without the relevant consent and dataset rights. Joblib files
-must be loaded only from this trusted local training run, never an unknown source.
+Before sharing this project, confirm consent for the supplied photos and the
+redistribution rights for the biometric datasets and derived artifacts. See
+[DATASET_SOURCES.md](DATASET_SOURCES.md) for source terms and attribution. Load
+Joblib files only from a trusted copy of the project.

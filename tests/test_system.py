@@ -9,7 +9,7 @@ import pytest
 from PIL import Image
 
 import pipeline
-from config import LIVE, MANIFESTS, MODELS, ROOT
+from config import LIVE, MANIFESTS, PROCESSED, ROOT
 from dataset_setup import file_hash, validate_manifest
 from features import face_features, fingerprint_features, voice_features
 from fusion import concatenate_features
@@ -91,17 +91,19 @@ def test_missing_models_fails_closed(monkeypatch):
 
 
 @pytest.fixture(scope="module")
-def real_data():
-    path = MANIFESTS / "samples.csv"
-    if not path.exists():
-        pytest.skip("Real dataset unavailable; run dataset_setup.py. This is not a passed data check.")
-    return pd.read_csv(path, keep_default_na=False)
+def sample_manifest():
+    return pd.read_csv(MANIFESTS / "samples.csv", keep_default_na=False)
+
+
+@pytest.fixture(scope="module")
+def real_data(sample_manifest):
+    if not any((PROCESSED / modality).is_dir() for modality in ("face", "voice", "fingerprint")):
+        pytest.skip("Full experiment samples are absent from the demo checkout.")
+    return sample_manifest
 
 
 @pytest.fixture(scope="module")
 def real_system():
-    if not (MODELS / "model_index.json").exists():
-        pytest.skip("Actual trained models unavailable; run train.py. This is not model verification.")
     return load_system()
 
 
@@ -113,18 +115,18 @@ def test_no_file_or_decoded_content_overlap(real_data):
 
 
 @pytest.mark.parametrize("modality", ["voice", "fingerprint"])
-def test_public_source_identity_is_consistent(real_data, modality):
-    group = real_data[real_data.modality == modality]
+def test_public_source_identity_is_consistent(sample_manifest, modality):
+    group = sample_manifest[sample_manifest.modality == modality]
     assert group.groupby("user_id").source_identity.nunique().tolist() == [1, 1, 1]
     assert group.source_identity.nunique() == 3
 
 
-def test_exact_public_splits(real_data):
-    voice = real_data[real_data.modality == "voice"]
+def test_exact_public_splits(sample_manifest):
+    voice = sample_manifest[sample_manifest.modality == "voice"]
     counts = voice.groupby(["user_id", "command", "split"]).size()
     for (user, command, split), count in counts.items():
         assert count == {"train": 3, "validation": 1, "test": 1}[split]
-    fingers = real_data[real_data.modality == "fingerprint"]
+    fingers = sample_manifest[sample_manifest.modality == "fingerprint"]
     for (user, split), count in fingers.groupby(["user_id", "split"]).size().items():
         assert count == {"train": 5, "validation": 1, "test": 2}[split]
 
@@ -146,28 +148,35 @@ def test_live_test_has_three_real_held_out_folders(real_data):
         assert fingerprint_features(paths[2]).shape == (8110,)
 
 
-def test_all_twelve_models_and_training_only_preprocessing(real_system, real_data):
+def test_all_twelve_models_use_expected_classifiers(real_system):
     assert len(real_system["models"]) == 6
     assert sum(len(values) for values in real_system["models"].values()) == 12
-    training_ids = set(real_data[real_data.split == "train"].sample_id)
-    for modality, preprocessor in real_system["preprocessors"].items():
-        expected = len(real_data[(real_data.modality == modality) & (real_data.split == "train")])
-        assert preprocessor[0].n_samples_seen_ == expected
-        assert preprocessor[1].n_samples_ == expected
-        for artifact in real_system["models"][modality].values():
-            assert set(artifact["training_ids"]) <= training_ids
-    for task, variants in real_system["models"].items():
+    for variants in real_system["models"].values():
         assert variants["knn"]["classifier"].n_neighbors == 3
         assert variants["svm"]["classifier"].kernel == "linear"
 
 
-def test_fusion_is_real_concatenation_without_repeated_components(real_system, real_data):
+def test_preprocessing_and_models_were_fit_on_training_only(real_system, sample_manifest):
+    training = sample_manifest[sample_manifest.split == "train"]
+    training_ids = set(training.sample_id)
+    for modality, preprocessor in real_system["preprocessors"].items():
+        expected = len(training[training.modality == modality])
+        assert preprocessor[0].n_samples_seen_ == expected
+        assert preprocessor[1].n_samples_ == expected
+        for artifact in real_system["models"][modality].values():
+            assert set(artifact["training_ids"]) <= training_ids
+
+
+def test_fusion_models_use_concatenated_features(real_system):
     dimensions = real_system["index"]["dimensions"]
     face_size, voice_size, finger_size = [dimensions[name]["after_pca"] for name in ("face", "voice", "fingerprint")]
     assert real_system["models"]["face_voice"]["knn"]["n_features"] == face_size + voice_size
     assert real_system["models"]["fusion3"]["svm"]["n_features"] == face_size + voice_size + finger_size
     assert concatenate_features(np.array([1, 2]), np.array([3])).tolist() == [1, 2, 3]
-    lookup = real_data.set_index("sample_id")
+
+
+def test_fusion_manifests_have_no_repeated_components(sample_manifest):
+    lookup = sample_manifest.set_index("sample_id")
     for name in ("face_voice_pairs.csv", "three_modality_triplets.csv"):
         manifest = pd.read_csv(MANIFESTS / name)
         for column in ("face_id", "voice_id", "fingerprint_id"):
@@ -264,63 +273,82 @@ def test_notebooks_json_and_code_are_valid():
             ast.parse(cell.source)
 
 
-@pytest.mark.parametrize("claim, folder, name, other", [
-    ("user_01", "Abdelrahman", "Abdelrahman", "kareem"),
-    ("user_02", "kareem", "Kareem", "renad"),
-    ("user_03", "renad", "Renad", "Abdelrahman"),
+def test_camera_identification_rejects_when_distance_exceeds_threshold(real_system):
+    from camera_face import load_camera_system
+    from camera_identification import identify_camera_face
+
+    photo = (ROOT / "datasets/demo/Abdelrahman/face.jpg").read_bytes()
+    camera = load_camera_system(real_system["identities"])
+    assert identify_camera_face(photo, camera) == ("user_01", None)
+
+    selected = camera["selected"]["face"]
+    models = camera["models"]["face"]
+    restricted = {**models[selected], "threshold": 0.0}
+    stricter_camera = {**camera, "models": {"face": {**models, selected: restricted}}}
+    identity, error = identify_camera_face(photo, stricter_camera)
+    assert identity is None
+    assert error.startswith("Face not recognized")
+
+
+@pytest.mark.parametrize("folder, name, other, other_name", [
+    ("Abdelrahman", "Abdelrahman", "kareem", "Kareem"),
+    ("kareem", "Kareem", "renad", "Renad"),
+    ("renad", "Renad", "Abdelrahman", "Abdelrahman"),
 ])
-def test_streamlit_staged_sign_in(claim, folder, name, other):
+def test_streamlit_staged_sign_in(folder, name, other, other_name):
     from streamlit.testing.v1 import AppTest
 
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     demo = ROOT / "datasets" / "demo"
-    assert not app.camera_input and not app.file_uploader
-    app.selectbox[0].select(claim).run()
-    assert app.camera_input and not app.file_uploader
+    assert len(app.camera_input) == 1
+    assert not app.selectbox and not app.file_uploader
     assert "Model Evaluation" not in [heading.value for heading in app.subheader]
 
     empty_frame = io.BytesIO()
     Image.new("RGB", (320, 240), "gray").save(empty_frame, format="JPEG")
     app.camera_input[0].upload("empty.jpg", empty_frame.getvalue()).run()
     assert app.error[0].value.startswith("No face detected")
-    assert not app.file_uploader
-
-    app.camera_input[0].upload("face.jpg", (demo / other / "face.jpg").read_bytes()).run()
-    assert app.error[0].value.startswith("Could not verify your face")
-    assert not app.file_uploader
+    assert app.camera_input and not app.file_uploader
 
     app.camera_input[0].upload("face.jpg", (demo / folder / "face.jpg").read_bytes()).run()
-    assert [item.value for item in app.success] == ["Face verified."]
+    assert [item.value for item in app.success] == [f"Identified as {name}."]
+    assert not app.camera_input and not app.selectbox
     assert [widget.label for widget in app.file_uploader] == ["Voice recording"]
+    assert [button.label for button in app.button] == ["Start over"]
 
     app.file_uploader[0].set_value(("voice.wav", (demo / other / "voice.wav").read_bytes(), "audio/wav")).run()
     assert app.error[0].value.startswith("Voice did not verify")
-    assert len(app.file_uploader) == 1
+    assert [widget.label for widget in app.file_uploader] == ["Voice recording"]
 
-    app.file_uploader[0].set_value(("voice.wav", (demo / folder / "voice.wav").read_bytes(), "audio/wav")).run()
-    assert [widget.label for widget in app.file_uploader] == ["Voice recording", "Fingerprint image"]
+    voice = ("voice.wav", (demo / folder / "voice.wav").read_bytes(), "audio/wav")
+    app.file_uploader[0].set_value(voice).run()
+    assert [item.value for item in app.success] == [f"Voice verified for {name}."]
+    assert not app.camera_input and not app.selectbox
+    assert [widget.label for widget in app.file_uploader] == ["Fingerprint image"]
+    assert {button.label for button in app.button} == {"Change recording", "Start over"}
 
-    app.file_uploader[1].set_value(("fingerprint.png", (demo / other / "fingerprint.png").read_bytes(), "image/png")).run()
+    app.file_uploader[0].set_value(("fingerprint.png", (demo / other / "fingerprint.png").read_bytes(), "image/png")).run()
     assert app.error[0].value.startswith("Fingerprint did not verify")
-    assert len(app.success) == 2
+    assert [widget.label for widget in app.file_uploader] == ["Fingerprint image"]
 
-    app.file_uploader[1].set_value(("fingerprint.png", (demo / folder / "fingerprint.png").read_bytes(), "image/png")).run()
-    assert app.success[-1].value == f"Signed in as {name}."
+    next(button for button in app.button if button.label == "Change recording").click().run()
+    assert [item.value for item in app.success] == [f"Identified as {name}."]
+    assert [widget.label for widget in app.file_uploader] == ["Voice recording"]
+    assert not app.file_uploader[0].value and not app.error
+    app.file_uploader[0].set_value(voice).run()
+    assert [widget.label for widget in app.file_uploader] == ["Fingerprint image"]
+    assert not app.file_uploader[0].value and not app.error
 
-    app.file_uploader[0].clear().run()
-    assert [item.value for item in app.success] == ["Face verified."]
-    assert len(app.file_uploader) == 1
-    app.file_uploader[0].set_value(("voice.wav", (demo / folder / "voice.wav").read_bytes(), "audio/wav")).run()
-    assert not app.file_uploader[1].value
-    assert len(app.success) == 2
+    app.file_uploader[0].set_value(("fingerprint.png", (demo / folder / "fingerprint.png").read_bytes(), "image/png")).run()
+    assert [item.value for item in app.success] == [f"Signed in as {name}."]
+    assert not app.camera_input and not app.file_uploader and not app.selectbox
+    assert [button.label for button in app.button] == ["Start over"]
 
-    app.camera_input[0].clear().run()
-    assert not app.file_uploader and not app.success
-    app.camera_input[0].upload("face.jpg", (demo / folder / "face.jpg").read_bytes()).run()
-    assert not app.file_uploader[0].value
-
-    next_claim = next(option for option in ("user_01", "user_02", "user_03") if option != claim)
-    app.selectbox[0].select(next_claim).run()
+    app.button[0].click().run()
     assert not app.camera_input[0].value
-    assert not app.file_uploader and not app.success
+    assert not app.file_uploader and not app.success and not app.error
+    app.camera_input[0].upload("face.jpg", (demo / other / "face.jpg").read_bytes()).run()
+    assert [item.value for item in app.success] == [f"Identified as {other_name}."]
+    assert [widget.label for widget in app.file_uploader] == ["Voice recording"]
+    assert not app.file_uploader[0].value
     assert not app.exception
