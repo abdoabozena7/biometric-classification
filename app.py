@@ -2,13 +2,15 @@
 
 import streamlit as st
 
+from camera_face import CAMERA_MODEL, load_camera_system, verify_camera_face
 from config import MODELS
-from verification import load_system, verify_face, verify_fingerprint, verify_voice
+from verification import load_system, verify_fingerprint, verify_voice
 
 
 @st.cache_resource
-def cached_system(index_modified):
-    return load_system()
+def cached_system(index_modified, camera_modified):
+    system = load_system()
+    return system, load_camera_system(system["identities"])
 
 
 def check_sample(stage, verifier, sample, claim, system, attempt):
@@ -28,7 +30,11 @@ st.title("Biometric Sign-in")
 
 try:
     model_revision = (MODELS / "model_index.json").stat().st_mtime_ns
-    system = cached_system(model_revision)
+    camera_revision = CAMERA_MODEL.stat().st_mtime_ns
+    system, camera = cached_system(model_revision, camera_revision)
+except FileNotFoundError:
+    st.error("Saved models are missing. Run python train.py and python camera_face.py.")
+    st.stop()
 except (OSError, ValueError, KeyError, TypeError, ImportError) as error:
     st.error(f"Sign-in is unavailable. Could not load the saved models: {error}")
     st.stop()
@@ -43,17 +49,20 @@ if claim is None:
 
 folder = identities[claim]["display_name"]
 name = folder.title()
-attempt = f"{claim}_{model_revision}"
+attempt = f"{claim}_{model_revision}_{camera_revision}"
 
 st.subheader("1. Face")
-st.caption("Center your face close to the camera, then take a photo.")
+st.caption("Face the camera and center your face, then take a photo.")
 photo = st.camera_input("Face photo", label_visibility="collapsed", width=420, key=f"photo_{attempt}")
 if photo is None:
     st.stop()
 
-face = check_sample("face", verify_face, photo, claim, system, attempt)
+face = check_sample("face", verify_camera_face, photo, claim, camera, attempt)
 if not face["accepted"]:
-    st.error(f"Could not verify your face for {name}. Clear the photo and try again.")
+    message = f"Could not verify your face for {name}. Clear the photo and try again."
+    if face["predicted_identity"] is None:
+        message = face["explanation"]
+    st.error(message)
     st.stop()
 st.success("Face verified.", icon=":material/check_circle:")
 

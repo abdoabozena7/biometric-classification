@@ -31,14 +31,15 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe dataset_setup.py
 .\.venv\Scripts\python.exe train.py
+.\.venv\Scripts\python.exe camera_face.py
 .\.venv\Scripts\python.exe evaluate.py
 .\.venv\Scripts\python.exe -m pytest -q
 .\.venv\Scripts\python.exe -m streamlit run app.py --server.address 127.0.0.1 --server.port 8501
 ```
 
 Do not recreate the environment if using the prepared one. With an already
-activated environment, `pip install -r requirements.txt`, `python dataset_setup.py`,
-`python train.py`, `python evaluate.py`, and `streamlit run app.py` also work.
+activated environment, run `pip install -r requirements.txt`, `python dataset_setup.py`,
+`python train.py`, `python camera_face.py`, `python evaluate.py`, and `streamlit run app.py`.
 
 Local application: **http://127.0.0.1:8501**. If occupied, choose another port.
 Cached offline data preparation: `python dataset_setup.py --local-only`.
@@ -59,6 +60,13 @@ The three demo folders include reference photos and sample uploads for the
 virtual accounts. The app takes the face image from the camera.
 Abdelrahman's demo fingerprint comes from validation. The other demo files
 come from held-out test samples.
+
+For the camera stage, `camera_face.py` locates the face with an LBP cascade,
+crops it, and normalizes grayscale contrast before extracting HOG and LBP.
+Small crop shifts, mirroring and gamma changes create six variants per training
+portrait. Scaling and PCA fit those training variants. The original validation
+portraits select between KNN(3) and linear SVM and calibrate the acceptance distance.
+The original face and fusion experiments continue to use their saved models.
 
 The main notebook defaults to `REBUILD_DATA=False` and `RETRAIN=False`. Run All
 does not silently replace splits or retrain saved models. Its small demonstration

@@ -1,5 +1,6 @@
 """Doubles here test routing only; trained-model tests below use real artifacts."""
 
+import io
 import json
 
 import numpy as np
@@ -277,6 +278,12 @@ def test_streamlit_staged_sign_in(claim, folder, name, other):
     app.selectbox[0].select(claim).run()
     assert app.camera_input and not app.file_uploader
     assert "Model Evaluation" not in [heading.value for heading in app.subheader]
+
+    empty_frame = io.BytesIO()
+    Image.new("RGB", (320, 240), "gray").save(empty_frame, format="JPEG")
+    app.camera_input[0].upload("empty.jpg", empty_frame.getvalue()).run()
+    assert app.error[0].value.startswith("No face detected")
+    assert not app.file_uploader
 
     app.camera_input[0].upload("face.jpg", (demo / other / "face.jpg").read_bytes()).run()
     assert app.error[0].value.startswith("Could not verify your face")
